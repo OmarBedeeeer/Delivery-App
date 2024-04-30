@@ -13,6 +13,10 @@ const productSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    quantity: {
+      type: Number,
+      required: true,
+    },
     description: {
       type: String,
       trim: true,
@@ -21,6 +25,10 @@ const productSchema = new mongoose.Schema(
     },
     image: {
       type: String,
+    },
+    owner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
     },
   },
   {
