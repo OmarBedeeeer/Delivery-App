@@ -40,9 +40,23 @@ const Userschema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // mobileNumber: {
+    //   type: String,
+    //   trim: true,
+    //   minLength: 11,
+    //   maxLength: 11,
+    //   required: true,
+    // },
   },
   { timestamps: true }
 );
+
+Userschema.pre("save", function (next) {
+  if (!this.role || this.role !== "ADMIN") {
+    this.role = this.role || "USER";
+    next();
+  }
+});
 
 const User = mongoose.model("user", Userschema);
 export default User;
