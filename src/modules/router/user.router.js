@@ -8,7 +8,7 @@ import {
   resetPassword,
 } from "../controllers/userAuth.controller.js";
 import { updateUser, deleteUser } from "../controllers/user.controller.js";
-import { authentecation, authorized } from "../middlewares/auth.js";
+import { authentecation, authorized } from "../../middlewares/auth.js";
 const router = Router();
 
 router.post("/signup", signUp);

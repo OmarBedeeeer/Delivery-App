@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { authentecation, authorized } from "../middlewares/auth.js";
+import { authentecation, authorized } from "../../middlewares/auth.js";
 import {
   createProduct,
   showSellerProducts,
