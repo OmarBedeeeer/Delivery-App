@@ -4,140 +4,142 @@ import User from "../models/user.model.js";
 import sendmail from "../../utils/email.sender.js";
 import { AppError, CatchError } from "../../utils/error.handler.js";
 
-export const signUp = CatchError(async (req, res, next) => {
-  const { password } = req.body;
+export const userAuthController = {
+  signUp: CatchError(async (req, res, next) => {
+    const { password } = req.body;
 
-  const findUser = await User.findOne({ email: req.body.email });
-  if (findUser) {
-    throw new AppError("User already exists", 400);
-  }
-
-  // const token = jwt.sign(
-  //   { id: findUser?._id, email: req.body.email },
-  //   process.env.SECRET_KEY,
-  //   {
-  //     expiresIn: "10min",
-  //   }
-  // );
-
-  // const link = `http://localhost:3000/verify/${token}`;
-
-  // await sendmail({
-  //   to: req.body.email,
-  //   subject: "Verify your account",
-  //   text: link,
-  // });
-
-  const hashingPassword = await bcryptjs.hash(password, 7);
-
-  const user = await User.create({
-    ...req.body,
-    password: hashingPassword,
-  });
-
-  res.status(201).json({ user });
-});
-
-export const signIn = CatchError(async (req, res, next) => {
-  const { email, password } = req.body;
-  const findUser = await User.findOne({ email /*isVerified: true*/ });
-  if (!findUser) {
-    throw new AppError("User not found", 400);
-  }
-
-  const comparePassword = await bcryptjs.compare(password, findUser.password);
-  if (!comparePassword) {
-    throw new AppError("Wrong Email Or password", 400);
-  }
-
-  const token = jwt.sign(
-    {
-      id: findUser._id,
-      email,
-      role: findUser.role,
-      totalSpinding: findUser.totalSpinding,
-      username: findUser.username,
-    },
-    process.env.SECRET_KEY,
-    {
-      expiresIn: "1d",
+    const findUser = await User.findOne({ email: req.body.email });
+    if (findUser) {
+      throw new AppError("User already exists", 400);
     }
-  );
 
-  res.status(200).json({ token, user: findUser });
-});
+    // const token = jwt.sign(
+    //   { id: findUser?._id, email: req.body.email },
+    //   process.env.SECRET_KEY,
+    //   {
+    //     expiresIn: "10min",
+    //   }
+    // );
 
-export const verify = CatchError(async (req, res, next) => {
-  const { token } = req.params;
-  const decode = jwt.verify(token, process.env.SECRET_KEY);
+    // const link = `http://localhost:3000/verify/${token}`;
 
-  const user = await User.findOne({ email: decode.email });
+    // await sendmail({
+    //   to: req.body.email,
+    //   subject: "Verify your account",
+    //   text: link,
+    // });
 
-  user.isVerified = true;
+    const hashingPassword = await bcryptjs.hash(password, 7);
 
-  user.save();
+    const user = await User.create({
+      ...req.body,
+      password: hashingPassword,
+    });
 
-  res.status(200).json({ msg: "verified" });
-});
+    res.status(201).json({ user });
+  }),
 
-export const changePassword = CatchError(async (req, res, next) => {
-  const { newPassword, bodyPass } = req.body;
+  signIn: CatchError(async (req, res, next) => {
+    const { email, password } = req.body;
+    const findUser = await User.findOne({ email /*isVerified: true*/ });
+    if (!findUser) {
+      throw new AppError("User not found", 400);
+    }
 
-  const user = await User.findById(req.user.id);
+    const comparePassword = await bcryptjs.compare(password, findUser.password);
+    if (!comparePassword) {
+      throw new AppError("Wrong Email Or password", 400);
+    }
 
-  const comparePassword = await bcryptjs.compare(bodyPass, user.password);
+    const token = jwt.sign(
+      {
+        id: findUser._id,
+        email,
+        role: findUser.role,
+        totalSpinding: findUser.totalSpinding,
+        username: findUser.username,
+      },
+      process.env.SECRET_KEY,
+      {
+        expiresIn: "1d",
+      }
+    );
 
-  if (!comparePassword) {
-    throw new AppError("Wrong password, please try again", 400);
-  }
+    res.status(200).json({ token, user: findUser });
+  }),
 
-  const hashingPassword = await bcryptjs.hash(newPassword, 7);
+  verify: CatchError(async (req, res, next) => {
+    const { token } = req.params;
+    const decode = jwt.verify(token, process.env.SECRET_KEY);
 
-  user.password = hashingPassword;
+    const user = await User.findOne({ email: decode.email });
 
-  await user.save();
+    user.isVerified = true;
 
-  res.status(200).json({ msg: "password changed successfully" });
-});
+    user.save();
 
-export const recoveryPassword = CatchError(async (req, res, next) => {
-  const { email } = req.body;
+    res.status(200).json({ msg: "verified" });
+  }),
 
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw new AppError("User not found", 400);
-  }
+  changePassword: CatchError(async (req, res, next) => {
+    const { newPassword, bodyPass } = req.body;
 
-  const token = jwt.sign({ email }, process.env.SECRET_KEY, {
-    expiresIn: "10min",
-  });
+    const user = await User.findById(req.user.id);
 
-  const forgetPasswordLink = `http://localhost:3000/users/reset/${token}`;
+    const comparePassword = await bcryptjs.compare(bodyPass, user.password);
 
-  const sendmailer = await sendmail({
-    to: email,
-    subject: "Reset your password",
-    text: forgetPasswordLink,
-  });
-  res.status(200).json({ message: "Email sent successfully" });
-});
+    if (!comparePassword) {
+      throw new AppError("Wrong password, please try again", 400);
+    }
 
-export const resetPassword = CatchError(async (req, res) => {
-  const { token } = req.params;
+    const hashingPassword = await bcryptjs.hash(newPassword, 7);
 
-  const { email } = jwt.verify(token, process.env.SECRET_KEY);
+    user.password = hashingPassword;
 
-  const { newPassword } = req.body;
+    await user.save();
 
-  const hashedPassword = await bcryptjs.hash(
-    newPassword,
-    parseInt(process.env.ROUNDS)
-  );
+    res.status(200).json({ msg: "password changed successfully" });
+  }),
 
-  const updatePassword = await User.findOneAndUpdate(
-    { email },
-    { password: hashedPassword }
-  );
+  recoveryPassword: CatchError(async (req, res, next) => {
+    const { email } = req.body;
 
-  res.status(200).json({ message: "Password reset successfully" });
-});
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new AppError("User not found", 400);
+    }
+
+    const token = jwt.sign({ email }, process.env.SECRET_KEY, {
+      expiresIn: "10min",
+    });
+
+    const forgetPasswordLink = `http://localhost:3000/users/reset/${token}`;
+
+    const sendmailer = await sendmail({
+      to: email,
+      subject: "Reset your password",
+      text: forgetPasswordLink,
+    });
+    res.status(200).json({ message: "Email sent successfully" });
+  }),
+
+  resetPassword: CatchError(async (req, res) => {
+    const { token } = req.params;
+
+    const { email } = jwt.verify(token, process.env.SECRET_KEY);
+
+    const { newPassword } = req.body;
+
+    const hashedPassword = await bcryptjs.hash(
+      newPassword,
+      parseInt(process.env.ROUNDS)
+    );
+
+    const updatePassword = await User.findOneAndUpdate(
+      { email },
+      { password: hashedPassword }
+    );
+
+    res.status(200).json({ message: "Password reset successfully" });
+  }),
+};
